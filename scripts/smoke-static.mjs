@@ -12,6 +12,16 @@ const cwd = process.cwd()
 const outSample = path.resolve(cwd, 'out', 'sample-trip.gpx')
 const FORBIDDEN_HIDDEN_DIRS = new Set(['.omc', '.omx', '.claude', '.codex', '.git'])
 
+// The only third-party origins the app may contact at runtime. These exist solely for
+// the optional 3D map styles (OpenFreeMap vector data/sprites/glyphs and Mapterhorn
+// terrain DEM tiles) and must stay in sync with the CSP definitions in
+// src/app/layout.tsx and scripts/harden-static-export.mjs.
+const ALLOWED_MAP_ORIGINS = new Set([
+  'https://tiles.openfreemap.org',
+  'https://tiles.mapterhorn.com',
+])
+const ALLOWED_STYLE_ASSET_ORIGINS = new Set(['https://tiles.openfreemap.org'])
+
 const basePath = normalizeBasePath(process.env.TRAVELBACK_BASE_PATH ?? process.env.STATIC_BASE_PATH ?? '/travelback')
 
 const requestedPort = Number(process.env.STATIC_SMOKE_PORT ?? '4183')
@@ -188,6 +198,23 @@ function assertStaticCspWasHardenedInHtml(html, htmlFile) {
     throw new Error('Static CSP is missing connect-src self')
   }
 
+  // The CSP may only open network access to the pinned map origins. Any other
+  // remote host in connect-src/img-src is a regression and must fail the build.
+  for (const directiveName of ['connect-src', 'img-src']) {
+    for (const source of directiveSources(directiveName)) {
+      if (source.startsWith("'") || source === 'data:' || source === 'blob:') continue
+      let origin
+      try {
+        origin = new URL(source).origin
+      } catch {
+        throw new Error(`Static CSP ${directiveName} contains an unparseable source: ${source}`)
+      }
+      if (!ALLOWED_MAP_ORIGINS.has(origin)) {
+        throw new Error(`Static CSP ${directiveName} allows unexpected remote origin: ${origin}`)
+      }
+    }
+  }
+
   if (!csp.includes("style-src 'self'")) {
     throw new Error("Static CSP must keep stylesheet loading restricted to self")
   }
@@ -272,6 +299,18 @@ async function assertStaticCspWasHardened() {
   }
 }
 
+function assertRemoteStyleOrigin(file, value, allowedOrigins) {
+  let url
+  try {
+    url = new URL(value.replace(/\{[^}]*\}/g, '0'))
+  } catch {
+    throw new Error(`${file} declares an unparseable remote asset URL: ${value}`)
+  }
+  if (!allowedOrigins.has(url.origin)) {
+    throw new Error(`${file} depends on a non-allowlisted origin: ${url.origin}`)
+  }
+}
+
 async function assertMapStylesPinnedLocally() {
   const stylesDir = path.resolve(cwd, 'out', 'map-styles')
   const styleFiles = (await readdir(stylesDir)).filter((name) => name.endsWith('.json'))
@@ -282,20 +321,67 @@ async function assertMapStylesPinnedLocally() {
 
   for (const file of styleFiles) {
     const content = JSON.parse(await readFile(path.join(stylesDir, file), 'utf8'))
-    if ('sprite' in content || 'glyphs' in content) {
-      throw new Error(`${file} still depends on remote sprite/glyph assets`)
+    const isTerrainStyle = content.metadata?.['travelback:terrain'] === true
+
+    if (!isTerrainStyle) {
+      if ('sprite' in content || 'glyphs' in content) {
+        throw new Error(`${file} still depends on remote sprite/glyph assets`)
+      }
+
+      const sourceKeys = Object.keys(content.sources ?? {})
+      if (sourceKeys.length !== 0) {
+        throw new Error(`${file} still declares external basemap sources: ${sourceKeys.join(', ')}`)
+      }
+
+      const hasSymbols = Array.isArray(content.layers) && content.layers.some((layer) => layer.type === 'symbol')
+      if (hasSymbols) {
+        throw new Error(`${file} still includes symbol layers that require glyph or sprite assets`)
+      }
+      continue
     }
 
-    const sourceKeys = Object.keys(content.sources ?? {})
-    if (sourceKeys.length !== 0) {
-      throw new Error(`${file} still declares external basemap sources: ${sourceKeys.join(', ')}`)
+    // The 3D terrain styles are the single intentional exception to the local-only
+    // map contract: they may only reference the pinned OpenFreeMap origin, and must
+    // be explicitly marked as unbundled so the CSP allowlist stays feature-scoped.
+    if (content.metadata?.['travelback:bundled'] !== false) {
+      throw new Error(`${file} is a terrain style but is not marked as unbundled`)
+    }
+    if (typeof content.sprite !== 'string' || typeof content.glyphs !== 'string') {
+      throw new Error(`${file} terrain style must declare sprite and glyphs explicitly`)
+    }
+    assertRemoteStyleOrigin(file, content.sprite, ALLOWED_STYLE_ASSET_ORIGINS)
+    assertRemoteStyleOrigin(file, content.glyphs, ALLOWED_STYLE_ASSET_ORIGINS)
+
+    const sources = Object.entries(content.sources ?? {})
+    if (sources.length === 0) {
+      throw new Error(`${file} terrain style must declare a basemap source`)
+    }
+    for (const [sourceName, source] of sources) {
+      if (source?.type !== 'vector' || typeof source.url !== 'string') {
+        throw new Error(`${file} source ${sourceName} must be an OpenFreeMap vector TileJSON source`)
+      }
+      assertRemoteStyleOrigin(file, source.url, ALLOWED_STYLE_ASSET_ORIGINS)
     }
 
-    const hasSymbols = Array.isArray(content.layers) && content.layers.some((layer) => layer.type === 'symbol')
-    if (hasSymbols) {
-      throw new Error(`${file} still includes symbol layers that require glyph or sprite assets`)
+    // OpenFreeMap only serves single-family glyph stacks; a combined stack such as
+    // ["Noto Sans Bold", "Noto Sans Regular"] is requested as one font name and 404s.
+    const symbolLayers = (content.layers ?? []).filter((layer) => layer.type === 'symbol')
+    for (const layer of symbolLayers) {
+      const font = layer.layout?.['text-font']
+      if (!Array.isArray(font) || font.length !== 1) {
+        throw new Error(`${file} layer ${layer.id} must use a single OpenFreeMap font family`)
+      }
     }
   }
+
+  // The Mapterhorn terrain TileJSON lives in MapView.tsx rather than the style JSON;
+  // keep it pinned to an origin the CSP actually allows.
+  const mapViewSource = await readFile(path.resolve(cwd, 'src/components/MapView.tsx'), 'utf8')
+  const terrainUrl = mapViewSource.match(/MAPTERHORN_TILEJSON_URL\s*=\s*'([^']+)'/)
+  if (!terrainUrl) {
+    throw new Error('MapView terrain TileJSON URL must be a single-quoted string constant')
+  }
+  assertRemoteStyleOrigin('MapView.tsx', terrainUrl[1], ALLOWED_MAP_ORIGINS)
 }
 
 async function assertWorkerParserOwnership() {

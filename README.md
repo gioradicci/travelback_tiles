@@ -211,7 +211,7 @@ Automatically deployed to GitHub Pages on push to `main` via `.github/workflows/
 ## Privacy & Network Behavior
 
 - **Track files are parsed locally in your browser.** Travelback does not upload your GPX, KML, or Google Timeline files to an app-owned backend.
-- **Map rendering is now fully local at runtime.** Style JSON, theme variants, and route rendering no longer depend on third-party basemap, glyph, sprite, or tile requests while the map is displayed.
+- **Map rendering is local by default.** The five bundled styles, theme variants, and route rendering make no third-party basemap, glyph, sprite, or tile requests. The optional **3D styles** (Liberty 3D, Bright 3D) are the only exception: they fetch OpenFreeMap vector tiles, sprites, and glyphs from `tiles.openfreemap.org` and Mapterhorn terrain DEM tiles from `tiles.mapterhorn.com`, and those two origins are the only remote hosts allowlisted in the CSP.
 - **Journey Creator now uses a local-only coordinate jump tool.** You can paste coordinates or supported map links without sending any network request.
 - **Large files are bounded for browser safety.** The uploader rejects very large files and extremely high point-count tracks to reduce tab-freeze risk from pathological inputs.
 

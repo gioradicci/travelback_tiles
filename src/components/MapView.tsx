@@ -100,7 +100,19 @@ const MAPTERHORN_TERRAIN_SOURCE = 'mapterhorn-terrain'
 const MAPTERHORN_TILEJSON_URL = 'https://tiles.mapterhorn.com/tilejson.json'
 const TERRAIN_EXAGGERATION = 1.5
 
-/** Add (or remove) the Mapterhorn terrain DEM and sky layer based on the active style. */
+// MapLibre GL JS 6 removed the `sky` layer type; atmosphere is now a style-level
+// property applied with map.setSky(). These values mirror the previous atmosphere look.
+const TERRAIN_SKY: maplibregl.SkySpecification = {
+  'sky-color': '#199EF3',
+  'horizon-color': '#ffffff',
+  'fog-color': '#0000ff',
+  'fog-ground-blend': 0.5,
+  'horizon-fog-blend': 0.5,
+  'sky-horizon-blend': 0.5,
+  'atmosphere-blend': 1,
+}
+
+/** Add (or remove) the Mapterhorn terrain DEM and atmosphere based on the active style. */
 function syncTerrainForStyle(map: maplibregl.Map, styleKey: MapStyleKey): void {
   const hasTerrain = MAP_STYLES[styleKey].terrain === true
 
@@ -114,21 +126,13 @@ function syncTerrainForStyle(map: maplibregl.Map, styleKey: MapStyleKey): void {
       } as maplibregl.RasterDEMSourceSpecification)
     }
     map.setTerrain({ source: MAPTERHORN_TERRAIN_SOURCE, exaggeration: TERRAIN_EXAGGERATION })
-    if (!map.getLayer('sky')) {
-      map.addLayer({
-        id: 'sky',
-        type: 'sky',
-        paint: {
-          'sky-type': 'atmosphere',
-          'sky-atmosphere-sun': [0.0, 90.0],
-          'sky-atmosphere-sun-intensity': 15,
-        },
-      } as unknown as maplibregl.LayerSpecification)
-    }
+    map.setSky(TERRAIN_SKY)
   } else {
-    // Disable terrain when switching away from a 3D style
-    // setTerrain(undefined) is the MapLibre GL v3+ API to remove terrain
+    // Disable terrain when switching away from a 3D style.
+    // setTerrain(undefined) is the MapLibre GL v3+ API to remove terrain; an
+    // undefined sky resets the style-level atmosphere to the map defaults.
     map.setTerrain(undefined as unknown as maplibregl.TerrainSpecification)
+    map.setSky(undefined as unknown as maplibregl.SkySpecification)
   }
 }
 

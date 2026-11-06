@@ -7,7 +7,7 @@
     "travelback:description": "OpenFreeMap vector tiles (OpenMapTiles schema) with Mapterhorn 3D terrain. Data: © OpenStreetMap contributors (ODbL). Terrain: ESA Copernicus GLO-30 (CC-BY IGO 3.0)."
   },
   "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-  "sprite": "https://tiles.openfreemap.org/sprites/liberty",
+  "sprite": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
   "sources": {
     "openmaptiles": {
       "type": "vector",
@@ -152,7 +152,7 @@
       "maxzoom": 7,
       "layout": {
         "text-field": ["coalesce", ["get", "name:latin"], ["get", "name"]],
-        "text-font": ["Noto Sans Bold", "Noto Sans Regular"],
+        "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 2, 10, 6, 14],
         "text-transform": "uppercase",
         "text-max-width": 6
@@ -164,7 +164,7 @@
       "minzoom": 5,
       "layout": {
         "text-field": ["coalesce", ["get", "name:latin"], ["get", "name"]],
-        "text-font": ["Noto Sans Bold", "Noto Sans Regular"],
+        "text-font": ["Noto Sans Bold"],
         "text-size": ["interpolate", ["linear"], ["zoom"],
           5, ["match", ["get", "class"], "city", 11, 8],
           12, ["match", ["get", "class"], "city", 18, 14]
@@ -192,7 +192,7 @@
         "text-field": ["step", ["zoom"],
           "", 12, ["coalesce", ["get", "name:latin"], ["get", "name"]]
         ],
-        "text-font": ["Noto Sans Italic", "Noto Sans Regular"],
+        "text-font": ["Noto Sans Italic"],
         "text-size": 11,
         "text-offset": [0, 1.2],
         "text-anchor": "top",

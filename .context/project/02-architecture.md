@@ -127,6 +127,7 @@ This local-processing boundary is not an offline-after-first-paint guarantee. Tr
 
 Privacy/trust-boundary note:
 - Local style JSON, palette choices, and layer definitions are bundled with the app, so normal route display no longer needs any third-party map requests. The bundled themes are abstract/local backdrops rather than full road/city basemaps.
+- The optional 3D terrain styles (`liberty-3d`, `bright-3d`) intentionally opt out of the local-only contract: they load OpenFreeMap vector tiles, sprites, and glyphs from `tiles.openfreemap.org`, and Mapterhorn terrain DEM tiles from `tiles.mapterhorn.com`. Those two origins are the only third-party hosts allowlisted by the meta CSP, and `scripts/smoke-static.mjs` fails the build if any other remote origin appears in `connect-src`/`img-src` or inside a map style.
 - Journey Creator includes a local-only coordinate jump tool that accepts pasted coordinates or coordinate-bearing links without geocoding.
 - Users with strict privacy requirements can keep route planning fully local by clicking on the map or pasting coordinates.
 
@@ -137,6 +138,7 @@ Security hardening note:
 - The static bundle rejects framed execution in the early bootstrap path. Production deployments on hosts/CDNs that support response headers should still send host-level anti-framing headers (`frame-ancestors 'none'` and/or `X-Frame-Options: DENY`) because meta CSP alone cannot enforce that control.
 - As of cycle r4 (2026-04-23), the meta CSP no longer advertises `frame-ancestors 'none'` because Chromium/Firefox emit a console error when that directive is delivered via `<meta>` (it is header-only per the CSP spec). GitHub Pages cannot attach custom anti-framing headers for this static app, so the Pages deployment relies on the JS frame-buster unless it is fronted by a header-capable CDN. `scripts/smoke-static.mjs` has a regression guard that fails the build if `frame-ancestors` reappears in the emitted meta CSP.
 - As of cycle r5 (2026-04-23), the Scene Editor and Journey Creator panels carry `role="region"` with `aria-labelledby` wired to their existing headings, so screen-reader landmark navigation can reach them alongside the `<main>` root added in cycle r4. `scripts/smoke-static.mjs` also asserts `object-src 'none'` and `base-uri 'none'` in the emitted CSP to guard the pinned directives in `scripts/harden-static-export.mjs`.
+- The meta CSP allowlists exactly two remote origins, both required only by the optional 3D styles: `https://tiles.openfreemap.org` (`connect-src` for vector/glyph/sprite requests and `img-src` for raster sprite fallbacks) and `https://tiles.mapterhorn.com` (`connect-src` for terrain DEM tiles). `scripts/smoke-static.mjs` rejects any other remote origin and pins the Mapterhorn TileJSON constant in `MapView.tsx` to the allowlist.
 
 ### Distance-Based Interpolation
 Animation progress is mapped to distance traveled (not point index). This ensures uniform visual speed regardless of point density in the track.

@@ -25,8 +25,10 @@ const STYLE_POLICY = [
   'style-src-elem __STYLE_HASHES__',
   "style-src-attr 'unsafe-inline'",
   "font-src 'self'",
-  "img-src 'self' blob: data:",
-  "connect-src 'self'",
+  // The optional 3D styles are the only remote map dependency: OpenFreeMap raster
+  // sprites, and OpenFreeMap vector/glyph requests plus Mapterhorn terrain DEM tiles.
+  "img-src 'self' blob: data: https://tiles.openfreemap.org",
+  "connect-src 'self' https://tiles.openfreemap.org https://tiles.mapterhorn.com",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "media-src 'self' blob:",

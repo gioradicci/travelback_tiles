@@ -7,7 +7,7 @@
     "travelback:description": "OpenFreeMap vector tiles (OpenMapTiles schema) with Mapterhorn 3D terrain. Data: © OpenStreetMap contributors (ODbL). Terrain: ESA Copernicus GLO-30 (CC-BY IGO 3.0)."
   },
   "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
-  "sprite": "https://tiles.openfreemap.org/sprites/bright",
+  "sprite": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
   "sources": {
     "openmaptiles": {
       "type": "vector",
@@ -805,8 +805,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Bold",
-          "Noto Sans Regular"
+          "Noto Sans Bold"
         ],
         "text-size": [
           "interpolate",
@@ -863,8 +862,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Bold",
-          "Noto Sans Regular"
+          "Noto Sans Bold"
         ],
         "text-size": [
           "interpolate",
@@ -993,8 +991,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Italic",
-          "Noto Sans Regular"
+          "Noto Sans Italic"
         ],
         "text-size": 11,
         "text-offset": [

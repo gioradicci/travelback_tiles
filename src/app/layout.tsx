@@ -62,10 +62,14 @@ export default function RootLayout({
             `npm run build` then runs `scripts/harden-static-export.mjs`, which replaces this
             placeholder with a hash-based static CSP and removes the production `unsafe-inline`
             script allowance from the emitted HTML. */}
+        {/* The optional 3D map styles are the only feature that talks to a third party:
+            OpenFreeMap vector tiles/sprites/glyphs (tiles.openfreemap.org) and Mapterhorn
+            terrain DEM tiles (tiles.mapterhorn.com). Both are pinned here and in
+            scripts/harden-static-export.mjs, and smoke-static.mjs rejects any other origin. */}
         <meta
           httpEquiv="Content-Security-Policy"
           data-travelback-csp="placeholder"
-          content={`default-src 'self'; script-src ${placeholderScriptSrc}; script-src-attr 'none'; style-src ${placeholderStyleSrc}; style-src-elem ${placeholderStyleSrc}; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests;`}
+          content={`default-src 'self'; script-src ${placeholderScriptSrc}; script-src-attr 'none'; style-src ${placeholderStyleSrc}; style-src-elem ${placeholderStyleSrc}; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' blob: data: https://tiles.openfreemap.org; connect-src 'self' https://tiles.openfreemap.org https://tiles.mapterhorn.com; worker-src 'self' blob:; child-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests;`}
         />
         <Script id="travelback-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: bootstrapScript }} />
         <link
