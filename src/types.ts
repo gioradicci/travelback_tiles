@@ -18,11 +18,11 @@ export interface Track {
   fallbackNameSource?: TrackFallbackNameSource
 }
 
-export type MapStyleKey = 'voyager' | 'positron' | 'dark' | 'liberty' | 'bright'
+export type MapStyleKey = 'voyager' | 'positron' | 'dark' | 'liberty' | 'bright' | 'liberty-3d' | 'bright-3d'
 
 import { basePath } from '@/lib/env'
 
-export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string }> = {
+export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string; terrain?: boolean }> = {
   voyager: {
     label: 'Voyager',
     url: `${basePath}/map-styles/voyager.json`,
@@ -42,6 +42,18 @@ export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string }> = {
   bright: {
     label: 'Bright',
     url: `${basePath}/map-styles/bright.json`,
+  },
+  // --- 3D styles: OpenFreeMap vector tiles + Mapterhorn terrain DEM ---
+  // Data: © OpenStreetMap contributors (ODbL) · Terrain: ESA Copernicus GLO-30 (CC-BY IGO 3.0)
+  'liberty-3d': {
+    label: 'Liberty 3D',
+    url: `${basePath}/map-styles/liberty-3d.json`,
+    terrain: true,
+  },
+  'bright-3d': {
+    label: 'Bright 3D',
+    url: `${basePath}/map-styles/bright-3d.json`,
+    terrain: true,
   },
 }
 

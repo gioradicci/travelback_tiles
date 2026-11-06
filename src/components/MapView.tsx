@@ -91,6 +91,45 @@ const GRID_PAINT_BY_STYLE: Record<MapStyleKey, { minor: string; major: string }>
   dark: { minor: 'rgba(148, 163, 184, 0.26)', major: 'rgba(148, 163, 184, 0.46)' },
   liberty: { minor: 'rgba(139, 116, 93, 0.2)', major: 'rgba(139, 116, 93, 0.34)' },
   bright: { minor: 'rgba(173, 150, 120, 0.22)', major: 'rgba(173, 150, 120, 0.38)' },
+  // 3D variants — same grid tones as their base counterparts
+  'liberty-3d': { minor: 'rgba(139, 116, 93, 0.2)', major: 'rgba(139, 116, 93, 0.34)' },
+  'bright-3d': { minor: 'rgba(173, 150, 120, 0.22)', major: 'rgba(173, 150, 120, 0.38)' },
+}
+
+const MAPTERHORN_TERRAIN_SOURCE = 'mapterhorn-terrain'
+const MAPTERHORN_TILEJSON_URL = 'https://tiles.mapterhorn.com/tilejson.json'
+const TERRAIN_EXAGGERATION = 1.5
+
+/** Add (or remove) the Mapterhorn terrain DEM and sky layer based on the active style. */
+function syncTerrainForStyle(map: maplibregl.Map, styleKey: MapStyleKey): void {
+  const hasTerrain = MAP_STYLES[styleKey].terrain === true
+
+  if (hasTerrain) {
+    if (!map.getSource(MAPTERHORN_TERRAIN_SOURCE)) {
+      map.addSource(MAPTERHORN_TERRAIN_SOURCE, {
+        type: 'raster-dem',
+        url: MAPTERHORN_TILEJSON_URL,
+        tileSize: 256,
+        encoding: 'terrarium',
+      } as maplibregl.RasterDEMSourceSpecification)
+    }
+    map.setTerrain({ source: MAPTERHORN_TERRAIN_SOURCE, exaggeration: TERRAIN_EXAGGERATION })
+    if (!map.getLayer('sky')) {
+      map.addLayer({
+        id: 'sky',
+        type: 'sky',
+        paint: {
+          'sky-type': 'atmosphere',
+          'sky-atmosphere-sun': [0.0, 90.0],
+          'sky-atmosphere-sun-intensity': 15,
+        },
+      } as unknown as maplibregl.LayerSpecification)
+    }
+  } else {
+    // Disable terrain when switching away from a 3D style
+    // setTerrain(undefined) is the MapLibre GL v3+ API to remove terrain
+    map.setTerrain(undefined as unknown as maplibregl.TerrainSpecification)
+  }
 }
 
 function angleDelta(from: number, to: number): number {
@@ -860,6 +899,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     }
 
     const activeTrack = trackRef.current
+    syncTerrainForStyle(map, styleKeyRef.current)
     addReferenceGridLayers(map, styleKeyRef.current, referenceGridDataRef.current)
     if (activeTrack) {
       const preparedTrack = preparedTrackRef.current

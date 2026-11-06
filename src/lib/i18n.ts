@@ -163,6 +163,8 @@ export const translations = {
     'mapStyle.dark': 'Dark',
     'mapStyle.liberty': 'Liberty',
     'mapStyle.bright': 'Bright',
+    'mapStyle.liberty-3d': 'Liberty 3D',
+    'mapStyle.bright-3d': 'Bright 3D',
 
     // GoogleGuide / ImportGuide
     'google.title': 'How to Get Your Travel Data',
@@ -536,6 +538,8 @@ export const translations = {
     'mapStyle.dark': '다크',
     'mapStyle.liberty': 'Liberty',
     'mapStyle.bright': 'Bright',
+    'mapStyle.liberty-3d': 'Liberty 3D',
+    'mapStyle.bright-3d': 'Bright 3D',
 
     // GoogleGuide / ImportGuide
     'google.title': '여행 데이터 가져오기',
@@ -909,6 +913,8 @@ export const translations = {
     'mapStyle.dark': 'ダーク',
     'mapStyle.liberty': 'Liberty',
     'mapStyle.bright': 'ブライト',
+    'mapStyle.liberty-3d': 'Liberty 3D',
+    'mapStyle.bright-3d': 'Bright 3D',
 
     // GoogleGuide
     'google.title': '旅行データの取得方法',
@@ -1282,6 +1288,8 @@ export const translations = {
     'mapStyle.dark': '深色',
     'mapStyle.liberty': 'Liberty',
     'mapStyle.bright': '明亮',
+    'mapStyle.liberty-3d': 'Liberty 3D',
+    'mapStyle.bright-3d': 'Bright 3D',
 
     // GoogleGuide
     'google.title': '如何获取旅行数据',
@@ -1655,6 +1663,8 @@ export const translations = {
     'mapStyle.dark': 'Oscuro',
     'mapStyle.liberty': 'Liberty',
     'mapStyle.bright': 'Brillante',
+    'mapStyle.liberty-3d': 'Liberty 3D',
+    'mapStyle.bright-3d': 'Bright 3D',
 
     // GoogleGuide
     'google.title': 'Cómo obtener tus datos de viaje',
@@ -1920,7 +1930,7 @@ export interface LocaleContextValue {
 
 export const LocaleContext = createContext<LocaleContextValue>({
   locale: 'en',
-  setLocale: () => {},
+  setLocale: () => { },
   t: (key) => translations.en[key] || key,
 })
 
@@ -1935,7 +1945,7 @@ function getPreferredLocale(): Locale {
     if (stored && VALID_LOCALES.includes(stored)) {
       return stored
     }
-  } catch {}
+  } catch { }
 
   return detectLocale()
 }
