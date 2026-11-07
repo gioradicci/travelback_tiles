@@ -220,6 +220,7 @@ export async function exportVideo(
   const videoSource = new VideoSampleSource({
     codec: mbCodec,
     bitrate: safeBitrate * 1_000_000, // Mbps to bps
+    hardwareAcceleration: 'prefer-hardware',
   })
 
   output.addVideoTrack(videoSource, { frameRate: safeFps })

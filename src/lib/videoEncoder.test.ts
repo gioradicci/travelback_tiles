@@ -283,6 +283,7 @@ describe('exportVideo lifecycle', () => {
     expect(mediabunny.sourceConfigs).toEqual([{
       codec: 'avc',
       bitrate: config.bitrate * 1_000_000,
+      hardwareAcceleration: 'prefer-hardware',
     }])
     expect(capturedFrames).toHaveLength(config.duration * config.fps)
     expect(frameContext.drawImage).toHaveBeenCalledTimes(config.duration * config.fps)
