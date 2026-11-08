@@ -22,26 +22,31 @@ export type MapStyleKey = 'voyager' | 'positron' | 'dark' | 'liberty' | 'bright'
 
 import { basePath } from '@/lib/env'
 
-export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string; terrain?: boolean }> = {
+export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string; terrain?: boolean; attribution?: string }> = {
   voyager: {
     label: 'Voyager',
     url: `${basePath}/map-styles/voyager.json`,
+    attribution: '© OpenStreetMap contributors · CARTO',
   },
   positron: {
     label: 'Light',
     url: `${basePath}/map-styles/positron.json`,
+    attribution: '© OpenStreetMap contributors · CARTO',
   },
   dark: {
     label: 'Dark',
     url: `${basePath}/map-styles/dark.json`,
+    attribution: '© OpenStreetMap contributors · CARTO',
   },
   liberty: {
     label: 'Liberty',
     url: `${basePath}/map-styles/liberty.json`,
+    attribution: '© OpenStreetMap contributors · OpenMapTiles',
   },
   bright: {
     label: 'Bright',
     url: `${basePath}/map-styles/bright.json`,
+    attribution: '© OpenStreetMap contributors · OpenMapTiles',
   },
   // --- 3D styles: OpenFreeMap vector tiles + Mapterhorn terrain DEM ---
   // Data: © OpenStreetMap contributors (ODbL) · Terrain: ESA Copernicus GLO-30 (CC-BY IGO 3.0)
@@ -49,13 +54,17 @@ export const MAP_STYLES: Record<MapStyleKey, { label: string; url: string; terra
     label: 'Liberty 3D',
     url: `${basePath}/map-styles/liberty-3d.json`,
     terrain: true,
+    attribution: '© OpenStreetMap contributors · OpenFreeMap · Mapterhorn',
   },
   'bright-3d': {
     label: 'Bright 3D',
     url: `${basePath}/map-styles/bright-3d.json`,
     terrain: true,
+    attribution: '© OpenStreetMap contributors · OpenFreeMap · Mapterhorn',
   },
 }
+
+export const DEFAULT_MAP_ATTRIBUTION = '© OpenStreetMap contributors · OpenFreeMap · Mapterhorn'
 
 // --- Camera Modes ---
 export type CameraMode = 'overview' | 'flyover' | 'orbit' | 'ground' | 'closeup' | 'birdeye'
@@ -124,6 +133,7 @@ export interface ExportConfig {
   bitrate: number // in Mbps
   scenes: Scene[]
   transitionDuration?: number
+  attribution?: string
 }
 
 export type ExportRequest = Omit<ExportConfig, 'scenes' | 'transitionDuration'>

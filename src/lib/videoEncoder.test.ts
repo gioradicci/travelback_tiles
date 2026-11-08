@@ -9,6 +9,7 @@ import {
   estimateExportMemoryBytes,
   exportVideo,
   isCodecSupported,
+  drawAttributionOverlay,
 } from './videoEncoder'
 
 const mediabunny = vi.hoisted(() => ({
@@ -90,6 +91,17 @@ const minimumConfig = (): ExportConfig => ({
 
 const frameContext = {
   drawImage: vi.fn(),
+  fillText: vi.fn(),
+  fillRect: vi.fn(),
+  roundRect: vi.fn(),
+  beginPath: vi.fn(),
+  fill: vi.fn(),
+  save: vi.fn(),
+  restore: vi.fn(),
+  measureText: vi.fn(() => ({ width: 100 })),
+  font: '',
+  fillStyle: '',
+  textBaseline: '',
 }
 const frameCanvases: MockOffscreenCanvas[] = []
 class MockOffscreenCanvas {
@@ -127,6 +139,13 @@ beforeEach(() => {
   mediabunny.sourceConfigs.length = 0
   mediabunny.samples.length = 0
   frameContext.drawImage.mockReset()
+  frameContext.fillText.mockReset()
+  frameContext.fillRect.mockReset()
+  frameContext.roundRect.mockReset()
+  frameContext.beginPath.mockReset()
+  frameContext.fill.mockReset()
+  frameContext.save.mockReset()
+  frameContext.restore.mockReset()
   frameCanvases.length = 0
   capturedFrames.length = 0
   createElement.mockClear()
@@ -475,5 +494,59 @@ describe('exportVideo lifecycle', () => {
     )).rejects.toBe(primaryError)
 
     expect(mediabunny.cancel).toHaveBeenCalledOnce()
+  })
+
+  it('draws attribution overlay onto frames when attribution is provided in config', async () => {
+    const configWithAttribution: ExportConfig = {
+      ...minimumConfig(),
+      attribution: '© OpenStreetMap contributors · OpenFreeMap',
+    }
+
+    await exportVideo(
+      canvas,
+      track,
+      configWithAttribution,
+      vi.fn().mockResolvedValue(undefined),
+      vi.fn().mockResolvedValue(undefined),
+    )
+
+    expect(frameContext.fillText).toHaveBeenCalled()
+    expect(frameContext.fillText).toHaveBeenCalledWith(
+      '© OpenStreetMap contributors · OpenFreeMap',
+      expect.any(Number),
+      expect.any(Number),
+    )
+  })
+})
+
+describe('drawAttributionOverlay', () => {
+  it('does nothing if attribution is empty', () => {
+    const ctx = { fillText: vi.fn(), save: vi.fn() } as unknown as CanvasRenderingContext2D
+    drawAttributionOverlay(ctx, '', 1920, 1080)
+    expect(ctx.fillText).not.toHaveBeenCalled()
+  })
+
+  it('draws background pill and text with correct styles', () => {
+    const ctx = {
+      fillText: vi.fn(),
+      fillRect: vi.fn(),
+      roundRect: vi.fn(),
+      beginPath: vi.fn(),
+      fill: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: vi.fn(() => ({ width: 120 })),
+      font: '',
+      fillStyle: '',
+      textBaseline: '',
+    } as unknown as CanvasRenderingContext2D
+
+    drawAttributionOverlay(ctx, '© OpenStreetMap contributors', 1920, 1080)
+
+    expect(ctx.save).toHaveBeenCalledOnce()
+    expect(ctx.roundRect).toHaveBeenCalledOnce()
+    expect(ctx.fill).toHaveBeenCalledOnce()
+    expect(ctx.fillText).toHaveBeenCalledWith('© OpenStreetMap contributors', expect.any(Number), expect.any(Number))
+    expect(ctx.restore).toHaveBeenCalledOnce()
   })
 })

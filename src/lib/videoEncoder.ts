@@ -1,11 +1,69 @@
 import type { VideoCodec as AppVideoCodec, ExportConfig, Track } from '@/types'
-import { EXPORT_LIMITS } from '@/types'
+import { EXPORT_LIMITS, DEFAULT_MAP_ATTRIBUTION } from '@/types'
 import type { CameraState } from './camera'
 import { computeCameraForProgress, normalizeScenes } from './camera'
 import { computeCumulativeDistances } from './interpolate'
 
 export const MAX_IN_MEMORY_EXPORT_BYTES = 256 * 1024 * 1024
 export const EXPORT_FINALIZE_TIMEOUT_MS = 60_000
+
+/**
+ * Render a clean, semi-transparent attribution overlay badge at the bottom-right
+ * of the exported video frame to comply with map/tile provider copyright and licensing terms.
+ */
+export function drawAttributionOverlay(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  attribution: string,
+  width: number,
+  height: number,
+): void {
+  if (!attribution || typeof ctx.fillText !== 'function') return
+
+  // Scale font and spacing based on resolution (approx 15px on 720p, 22px on 1080p, 43px on 4K)
+  const baseDimension = Math.min(width, height)
+  const fontSize = Math.max(14, Math.round(baseDimension * 0.020))
+  const paddingX = Math.round(fontSize * 0.7)
+  const paddingY = Math.round(fontSize * 0.4)
+  const marginX = Math.max(16, Math.round(width * 0.02))
+  // Margin from bottom is generous (35-40px on 1080p) to clear standard video player playback bars
+  const marginY = Math.max(24, Math.round(height * 0.035))
+
+  ctx.save()
+  try {
+    ctx.font = `600 ${fontSize}px "Segoe UI", Roboto, Arial, sans-serif`
+  } catch {
+    ctx.font = `600 ${fontSize}px sans-serif`
+  }
+  ctx.textBaseline = 'middle'
+
+  const textMetrics = typeof ctx.measureText === 'function' ? ctx.measureText(attribution) : null
+  const textWidth = textMetrics?.width || (attribution.length * fontSize * 0.58)
+  const textHeight = fontSize
+
+  const boxWidth = textWidth + paddingX * 2
+  const boxHeight = textHeight + paddingY * 2
+
+  const x = Math.max(0, width - boxWidth - marginX)
+  const y = Math.max(0, height - boxHeight - marginY)
+
+  // Semi-transparent dark pill background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.72)'
+  const cornerRadius = Math.max(4, Math.round(fontSize * 0.25))
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath()
+    ctx.roundRect(x, y, boxWidth, boxHeight, cornerRadius)
+    ctx.fill()
+  } else if (typeof ctx.fillRect === 'function') {
+    ctx.fillRect(x, y, boxWidth, boxHeight)
+  }
+
+  // Crisp high-contrast white text with subtle shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.85)'
+  ctx.shadowBlur = Math.max(2, Math.round(fontSize * 0.15))
+  ctx.fillStyle = '#ffffff'
+  ctx.fillText(attribution, x + paddingX, y + boxHeight / 2)
+  ctx.restore()
+}
 
 /**
  * Export error with a machine-readable code for i18n mapping.
@@ -157,7 +215,7 @@ export async function exportVideo(
   // Dynamic import mediabunny (it uses WebCodecs, browser-only)
   const { Output, Mp4OutputFormat, BufferTarget, VideoSample, VideoSampleSource } = await import('mediabunny')
 
-  const { codec, fps, duration, bitrate, scenes } = config
+  const { codec, fps, duration, bitrate, scenes, attribution } = config
 
   // Clamp config values to safe bounds
   const safeDuration = Math.max(EXPORT_LIMITS.duration.min, Math.min(duration, EXPORT_LIMITS.duration.max))
@@ -265,6 +323,13 @@ export async function exportVideo(
         frameContext.drawImage(capturedFrame, 0, 0, frameCanvas.width, frameCanvas.height)
       } finally {
         capturedFrame.close()
+      }
+
+      if (attribution) {
+        if (frame === 0) {
+          console.info(`[Travelback] Exporting video frames with attribution overlay: "${attribution}"`)
+        }
+        drawAttributionOverlay(frameContext, attribution, frameCanvas.width, frameCanvas.height)
       }
 
       const sample = new VideoSample(frameCanvas, { timestamp, duration: frameDuration })

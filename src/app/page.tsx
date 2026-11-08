@@ -233,6 +233,7 @@ function HomeInner() {
     setPlaybackProgress,
     playbackProgress: progress,
     cumulativeDistances,
+    mapStyleKey,
   })
 
   const toggleExportPanel = useCallback(() => {

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, type RefObject } from 'react'
-import type { ExportConfig, ExportRequest, Scene, Track } from '@/types'
+import type { ExportConfig, ExportRequest, Scene, Track, MapStyleKey } from '@/types'
+import { MAP_STYLES, DEFAULT_MAP_ATTRIBUTION } from '@/types'
 import type { ToastMessage } from '@/components/Toast'
 import type { MapViewHandle } from '@/components/MapView'
 import { computeCumulativeDistances } from '@/lib/interpolate'
@@ -34,6 +35,7 @@ interface UseExportControllerOptions {
   setPlaybackProgress: (progress: number) => void
   playbackProgress: number
   cumulativeDistances?: number[]
+  mapStyleKey?: MapStyleKey
 }
 
 export function useExportController({
@@ -47,6 +49,7 @@ export function useExportController({
   setPlaybackProgress,
   playbackProgress,
   cumulativeDistances: cumulativeDistancesProp,
+  mapStyleKey,
 }: UseExportControllerOptions) {
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
@@ -65,6 +68,7 @@ export function useExportController({
   const mountedRef = useRef(true)
   const tRef = useRef(t)
   const scenesRef = useRef(scenes)
+  const mapStyleKeyRef = useRef(mapStyleKey)
 
   // Keep the ref in sync with the prop so exportTrack can read the latest
   // value without closing over the rapidly-changing state variable.
@@ -83,6 +87,10 @@ export function useExportController({
   useEffect(() => {
     scenesRef.current = scenes
   }, [scenes])
+
+  useEffect(() => {
+    mapStyleKeyRef.current = mapStyleKey
+  }, [mapStyleKey])
 
   useEffect(() => {
     mountedRef.current = true
@@ -170,10 +178,16 @@ export function useExportController({
         ? scenesRef.current
         : generateDefaultScenes()
 
+      const currentMapStyleKey = mapStyleKeyRef.current ?? mapStyleKey
+      const activeAttribution = config.attribution
+        ?? (currentMapStyleKey ? MAP_STYLES[currentMapStyleKey]?.attribution : undefined)
+        ?? DEFAULT_MAP_ATTRIBUTION
+
       const exportConfig: ExportConfig = {
         ...config,
         scenes: exportScenes,
         transitionDuration,
+        attribution: activeAttribution,
       }
 
       mapHandle.resize(config.resolution.width, config.resolution.height)
@@ -203,46 +217,46 @@ export function useExportController({
 
       const result = isLocalExportTestStubEnabled()
         ? await new Promise<{ buffer: ArrayBuffer; filename: string; mimeType: string }>((resolve) => {
-            setPlaybackProgress(1)
-            setExportProgress(1)
-            requestAnimationFrame(() => {
-              resolve({
-                buffer: new TextEncoder().encode(LOCAL_EXPORT_TEST_STUB_PAYLOAD).buffer,
-                filename: `Travelback - ${trackForExport.name}.mp4`,
-                mimeType: 'video/mp4',
-              })
+          setPlaybackProgress(1)
+          setExportProgress(1)
+          requestAnimationFrame(() => {
+            resolve({
+              buffer: new TextEncoder().encode(LOCAL_EXPORT_TEST_STUB_PAYLOAD).buffer,
+              filename: `Travelback - ${trackForExport.name}.mp4`,
+              mimeType: 'video/mp4',
             })
           })
+        })
         : await exportVideo(
-            canvas,
-            trackForExport,
-            exportConfig,
-            async (nextProgress, cameraState) => {
-              await mapHandle.renderFrameAndWait(cameraState, nextProgress, abortController.signal)
-              // Throttle visible playback state updates to ~10 Hz using
-              // a time-based interval so UI refresh rate is consistent
-              // regardless of export duration or frame rate.
-              const now = performance.now()
-              if (exportProgressRef.current === undefined || now - lastProgressUpdateTimeRef.current >= 100) {
-                setPlaybackProgress(nextProgress)
-                exportProgressRef.current = nextProgress
-                lastProgressUpdateTimeRef.current = now
-              }
-            },
-            waitForStableMap,
-            (nextProgress) => {
-              // Throttle export progress display updates to ~10 Hz so the
-              // progress bar does not re-render on every frame (same pattern
-              // as the playback progress throttle above).
-              const now = performance.now()
-              if (now - lastExportProgressUpdateTimeRef.current >= 100) {
-                setExportProgress(nextProgress)
-                lastExportProgressUpdateTimeRef.current = now
-              }
-            },
-            abortController.signal,
-            cumulDist,
-          )
+          canvas,
+          trackForExport,
+          exportConfig,
+          async (nextProgress, cameraState) => {
+            await mapHandle.renderFrameAndWait(cameraState, nextProgress, abortController.signal)
+            // Throttle visible playback state updates to ~10 Hz using
+            // a time-based interval so UI refresh rate is consistent
+            // regardless of export duration or frame rate.
+            const now = performance.now()
+            if (exportProgressRef.current === undefined || now - lastProgressUpdateTimeRef.current >= 100) {
+              setPlaybackProgress(nextProgress)
+              exportProgressRef.current = nextProgress
+              lastProgressUpdateTimeRef.current = now
+            }
+          },
+          waitForStableMap,
+          (nextProgress) => {
+            // Throttle export progress display updates to ~10 Hz so the
+            // progress bar does not re-render on every frame (same pattern
+            // as the playback progress throttle above).
+            const now = performance.now()
+            if (now - lastExportProgressUpdateTimeRef.current >= 100) {
+              setExportProgress(nextProgress)
+              lastExportProgressUpdateTimeRef.current = now
+            }
+          },
+          abortController.signal,
+          cumulDist,
+        )
 
       if (abortController.signal.aborted) {
         throw new DOMException('Export cancelled', 'AbortError')
@@ -351,6 +365,7 @@ export function useExportController({
     track,
     transitionDuration,
     cumulativeDistancesProp,
+    mapStyleKey,
   ])
 
   return {
