@@ -30,7 +30,7 @@ export {
   getImportSizePolicy,
 }
 
-const XML_MAX_TAGS = 150_000
+const XML_MAX_TAGS = 500_000
 const XML_MAX_NESTING_DEPTH = 128
 const TRACK_FALLBACK_NAME_SOURCES = new Set<TrackFallbackNameSource>(['gpx', 'kml', 'google'])
 

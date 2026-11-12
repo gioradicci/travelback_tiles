@@ -1295,6 +1295,29 @@ describe('parseGPX — additional edge cases', () => {
     expect(track.points[0].time).toBeUndefined()
   })
 
+  it('parses large GPX tracks with more than 150,000 XML tags (e.g. Strava/Garmin tracks with extensions)', () => {
+    const pts: string[] = []
+    for (let i = 0; i < 13000; i++) {
+      pts.push(`<trkpt lat="41.25" lon="13.72"><ele>18.4</ele><time>2026-04-26T07:32:14Z</time><extensions><gpxtpx:TrackPointExtension><gpxtpx:atemp>18</gpxtpx:atemp></gpxtpx:TrackPointExtension></extensions></trkpt>`)
+    }
+    const largeGpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><trk><name>Large Tour</name><trkseg>${pts.join('')}</trkseg></trk></gpx>`
+    const track = parseGPX(largeGpx)
+    expect(track.name).toBe('Large Tour')
+    expect(track.points.length).toBe(13000)
+  }, 20000)
+
+  it('successfully parses the real-world Strava GPX Gran Tour Lazio file', () => {
+    const fs = require('fs')
+    if (fs.existsSync('temp-test-file.gpx')) {
+      const content = fs.readFileSync('temp-test-file.gpx', 'utf8')
+      const track = parseGPX(content)
+      expect(track.name).toBe('Gran Tour Lazio - Minturno-Cassino')
+      expect(track.points.length).toBe(12883)
+      expect(track.points[0].lat).toBeCloseTo(41.252411)
+      expect(track.points[0].lng).toBeCloseTo(13.721839)
+    }
+  }, 20000)
+
   it('handles GPX with negative elevation', () => {
     const gpxNegativeEle = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1">
